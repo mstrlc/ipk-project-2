@@ -239,29 +239,32 @@ string solve_expression(list<string> tokens) {
 /**
  * @brief TCP server
  *
- * @param host
- * @param port
- * @return int
+ * @cite https://github.com/nikhilroxtomar/Multiple-Client-Server-Program-in-C-using-fork/blob/master/tcpServer.c
+ * @cite https://git.fit.vutbr.cz/NESFIT/IPK-Projekty/src/branch/master/Stubs/cpp/DemoTcp/server.c
  *
- * https://github.com/nikhilroxtomar/Multiple-Client-Server-Program-in-C-using-fork/blob/master/tcpServer.c
+ * @param host IPv4 address to listen on
+ * @param port Port to listen on
+ * @return int Exit code
  */
 int tcp_server(string host, string port) {
+    // Setup
     int rc;
-    int welcome_socket;
     struct sockaddr_in6 sa;
     struct sockaddr_in6 sa_client;
     char str[INET6_ADDRSTRLEN];
-    int port_number;
-    pid_t childpid;
-    port_number = atoi(port.c_str());
-    int newsocket;
+    int port_number = atoi(port.c_str());
 
+    // Forked child process
+    pid_t child_pid;
+
+    // Create welcome socket
     socklen_t sa_client_len = sizeof(sa_client);
     if ((welcome_socket = socket(PF_INET6, SOCK_STREAM, 0)) < 0) {
         perror("ERROR: socket");
         exit(EXIT_FAILURE);
     }
-    int comm_socket;
+
+    // Bind welcome socket
     memset(&sa, 0, sizeof(sa));
     sa.sin6_family = AF_INET6;
     sa.sin6_addr = in6addr_any;
@@ -271,55 +274,90 @@ int tcp_server(string host, string port) {
         perror("ERROR: bind");
         exit(EXIT_FAILURE);
     }
+
+    // Listen for new connections, limit is 10
     if ((listen(welcome_socket, 10)) < 0) {
         perror("ERROR: listen");
         exit(EXIT_FAILURE);
     }
+
+    // Accept new connections in loop
     while (1) {
         comm_socket = accept(welcome_socket, (struct sockaddr *)&sa_client, &sa_client_len);
+        // Successful connection
         if (comm_socket > 0) {
             if (inet_ntop(AF_INET6, &sa_client.sin6_addr, str, sizeof(str))) {
-                if ((childpid = fork()) == 0) {
+                // Fork child process to allow parent process to accept new connections
+                if ((child_pid = fork()) == 0) {
                     close(welcome_socket);
+                    // Child process
+                    // Accept messages from client
+
+                    // Flag to check if HELLO was sent
+                    bool hello_sent = false;
 
                     while (1) {
-                        char buff[1024];
+                        // Limit is 1024 bytes
+                        char buff[UDP_BUFSIZE];
+                        buff[0] = '\0';
                         int res = 0;
-                        res = recv(comm_socket, buff, 1024, 0);
+                        res = recv(comm_socket, buff, UDP_BUFSIZE, 0);
                         if (res <= 0)
                             break;
-
-                        if (strcmp(buff, "HELLO\n") == 0) {
-                            bzero(buff, strlen(buff));
-                            sprintf(buff, "HELLO\n");
-                            send(comm_socket, buff, strlen(buff), 0);
-                            bzero(buff, strlen(buff));
-                        } else if (strcmp(buff, "BYE\n") == 0) {
-                            bzero(buff, strlen(buff));
-                            sprintf(buff, "BYE\n");
-                            send(comm_socket, buff, strlen(buff), 0);
-                            bzero(buff, strlen(buff));
+                        // Hello opens connection
+                        if (strncmp(buff, "HELLO\n", 6) == 0) {
+                            // Another Hello is wrong
+                            if (hello_sent) {
+                                const char response[] = "BYE\n";
+                                send(comm_socket, response, strlen(response), 0);
+                                buff[0] = '\0';
+                                continue;
+                            }
+                            const char response[] = "HELLO\n";
+                            send(comm_socket, response, strlen(response), 0);
+                            hello_sent = true;
+                        }
+                        // Solve expression
+                        else if (strncmp(buff, "SOLVE ", 6) == 0 && hello_sent) {
+                            char *first = strchr(buff, '\n');
+                            if (first != nullptr) {
+                                *first = '\0';
+                                auto parsed = parse_expression(buff + 6);
+                                std::string result = solve_expression(parsed);
+                                if (result == "err") {
+                                    const char response[] = "BYE\n";
+                                    send(comm_socket, response, strlen(response), 0);
+                                    buff[0] = '\0';
+                                    continue;
+                                }
+                                // Zero buffer
+                                snprintf(buff, strlen(result.c_str()) + 8, "RESULT %s\n", result.c_str());
+                                send(comm_socket, buff, strlen(buff), 0);
+                            }
+                        }
+                        // Anything other is invalid
+                        else {
+                            const char response[] = "BYE\n";
+                            send(comm_socket, response, strlen(response), 0);
+                            close(comm_socket);
                             break;
-                        } else if (buff[0] == 'S' && buff[1] == 'O' && buff[2] == 'L' && buff[3] == 'V' && buff[4] == 'E' && buff[5] == ' ') {
-                            auto first = string(buff).find_first_of('\n');
-                            buff[first] = '\0';
-                            int result = solve_expression(buff + 6);
-                            bzero(buff, strlen(buff));
-                            sprintf(buff, "RESULT %d\n", result);
-                            send(comm_socket, buff, strlen(buff), 0);
-                            bzero(buff, strlen(buff));
                         }
                     }
+                    // Close socket
+                    close(comm_socket);
                 }
             }
         }
     }
-    printf("Connection to %s closed\n", str);
+    // Wait for all children to finish
+    while (wait(NULL) > 0)
+        ;
+
+    // Close connection
+    close(welcome_socket);
     close(comm_socket);
     return 0;
 }
-
-#define BUFSIZE 512
 
 /**
  * @brief UDP server
