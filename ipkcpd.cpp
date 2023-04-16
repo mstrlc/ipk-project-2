@@ -33,6 +33,12 @@
 #include <stack>
 #include <string>
 
+#define ERROR 1
+#define SUCCESS 0
+
+#define TCP_BUFSIZE 1024
+#define UDP_BUFSIZE 512
+
 // No need to write std:: for everything
 using namespace std;
 
