@@ -454,14 +454,8 @@ int udp_server(string host, string port) {
  * @return Exit code
  */
 int main(int argc, char **argv) {
-    // list<string> tokens = parse_expression("(/ (+ 7 3) 2)");
-    // int result = solve_expression(tokens);
-    // // Load arguments to global variable
-    // // args = parse_args(argc, argv);
-    // args_t args;
-    args.host = "localhost";
-    args.port = "3221";
-    args.mode = "tcp";
+    // Load arguments to global variable
+    args = parse_args(argc, argv);
 
     // Check if host is correct
     if (args.host.empty()) {
