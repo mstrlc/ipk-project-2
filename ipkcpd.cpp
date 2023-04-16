@@ -54,6 +54,22 @@ struct args_t {
 
 // Global variables
 args_t args;
+int comm_socket;
+int welcome_socket;
+
+/**
+ * @brief Signal handler
+ *
+ * @cite https://stackoverflow.com/a/1641223
+ *
+ * @param sig Signal number
+ */
+void sighandler(int sig) {
+    int pid = wait3(NULL, WNOHANG, NULL);
+    printf("Child %d spawned.\n", pid);
+    close(comm_socket);
+    close(welcome_socket);
+}
 
 /**
  * @brief Parses command-line arguments
