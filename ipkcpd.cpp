@@ -96,25 +96,52 @@ args_t parse_args(int argc, char **argv) {
     return args;
 }
 
-//    (+ 111 (* 432 3))
-// https://www.geeksforgeeks.org/split-a-sentence-into-words-in-cpp/
+/**
+ * @brief Splits given expressions into list of tokens
+ *
+ * @cite https://www.geeksforgeeks.org/split-a-sentence-into-words-in-cpp/
+ *
+ * @param expression Expression to be split, expecting format as per defined protocol
+ * @return list<string> List of tokens
+ */
 list<string> parse_expression(string expression) {
+    // Final list of tokens
     list<string> tokens;
-    string new_expression;
+    int open_parentheses = 0;
+    int closed_parentheses = 0;
 
+    // Add spaces around parentheses to make parsing easier
+    string new_expression;
     for (int i = 0; i < expression.length(); i++) {
-        if (expression[i] == '(' || expression[i] == ')') {
+        if (expression[i] == ' ' && expression[i + 1] == ' ') {
+            return tokens;
+        }
+        if (expression[i] == '(') {
             new_expression += " ";
             new_expression += expression[i];
             new_expression += " ";
+            open_parentheses++;
+        } else if (expression[i] == ')') {
+            new_expression += " ";
+            new_expression += expression[i];
+            new_expression += " ";
+            closed_parentheses++;
         } else {
             new_expression += expression[i];
         }
+        if (expression[i] != '+' && expression[i] != '-' && expression[i] != '*' && expression[i] != '/' && expression[i] != '(' && expression[i] != ')' && !isdigit(expression[i]) && expression[i] != ' ') {
+            return tokens;
+        }
+    }
+    if (open_parentheses != closed_parentheses) {
+        return tokens;
     }
 
+    // Split string by spaces
     istringstream ss(new_expression);
+    // For storing each word
     string token;
-
+    // Traverse through all words, add to list
     while (ss >> token) {
         tokens.insert(tokens.end(), token);
     }
@@ -122,47 +149,93 @@ list<string> parse_expression(string expression) {
     return tokens;
 }
 
-int solve_expression(string expression) {
-    list<string> tokens = parse_expression(expression);
+/**
+ * @brief Solves given expression
+ *
+ * @param expression Expression to be solved, expecting format as per defined protocol
+ * @return int Result of the expression
+ */
+string solve_expression(list<string> tokens) {
+    // Stack needs to be used in solving a preorder expression
+    stack<string> elements;
+    string top;
+    // int operand1, operand2;
 
-    stack<string> stack;
-
-    for (string token : tokens) {
-        if (token != ")") {
-            stack.push(token);
-        } else {
-            int result = 0;
-            int operand2 = stoi(stack.top());
-            stack.pop();
-            int operand1 = stoi(stack.top());
-            stack.pop();
-            string operation = stack.top();
-            stack.pop();
-            stack.pop();
-
-            if (operation == "+") {
-                result = operand1 + operand2;
-            } else if (operation == "-") {
-                result = operand1 - operand2;
-            } else if (operation == "*") {
-                result = operand1 * operand2;
-            } else if (operation == "/") {
-                result = operand1 / operand2;
-            }
-
-            stack.push(to_string(result));
-        }
+    // Parser encountered an error
+    if (tokens.empty()) {
+        return "err";
     }
 
-    return stoi(stack.top());
+    string arr[tokens.size()];
+    std::copy(tokens.begin(), tokens.end(), arr);
+    // Remove first element unneeded paranthesis
+    arr[0] = "";
+
+    // Traverse through all tokens
+    int index = 0;
+    string tok = arr[index];
+    while (1) {
+        if (index >= tokens.size()) {
+            break;
+        }
+        tok = arr[index];
+        if (tok == "(") {
+            arr[index] = "";
+            // Create new list of tokens starting from the next token
+            list<string> new_tokens;
+            for (int i = index; i < tokens.size(); i++) {
+                new_tokens.insert(new_tokens.end(), arr[i]);
+            }
+            // Solve the new expression recursively
+            string result = solve_expression(new_tokens);
+            elements.push(result);
+            // Find the index of the closing parenthesis
+            int closing_parenthesis_index = 0;
+            for (int i = index + 1; i < tokens.size(); i++) {
+                if (arr[i] == ")") {
+                    closing_parenthesis_index = i;
+                    break;
+                }
+            }
+            // Set index to the closing parenthesis
+            index = closing_parenthesis_index;
+        } else if (tok == "+" || tok == "-" || tok == "*" || tok == "/") {
+            elements.push(tok);
+        } else if (std::all_of(tok.begin(), tok.end(), ::isdigit)) {
+            elements.push(tok);
+        } else if (tok == ")") {
+            stack<int> operands;
+            while (elements.top() != "+" && elements.top() != "-" && elements.top() != "*" && elements.top() != "/") {
+                string top = elements.top();
+                operands.push(atoi(top.c_str()));
+                elements.pop();
+            }
+            string operation = elements.top();
+            elements.pop();
+            while (operands.size() > 1) {
+                int operand1 = operands.top();
+                operands.pop();
+                int operand2 = operands.top();
+                operands.pop();
+                if (operation == "+") {
+                    operands.push(operand1 + operand2);
+                } else if (operation == "-") {
+                    operands.push(operand1 - operand2);
+                } else if (operation == "*") {
+                    operands.push(operand1 * operand2);
+                } else if (operation == "/") {
+                    operands.push(operand1 / operand2);
+                }
+            }
+            int res = operands.top();
+            return (to_string(res));
+        }
+        index++;
+    }
+    // Return result as integer
+    return elements.top();
 }
 
-void SigCatcher(int n) {
-    int pid = wait3(NULL, WNOHANG, NULL);
-    printf("Child %d spawned.\n", pid);
-}
-
-#define WELCOME_MSG "Hi, type anything. To end type 'bye.' at a separate line.\n"
 /**
  * @brief TCP server
  *
