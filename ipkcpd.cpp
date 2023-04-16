@@ -362,69 +362,82 @@ int tcp_server(string host, string port) {
 /**
  * @brief UDP server
  *
- * @param host
- * @param port
- * @return int
+ * @param host IPv4 address to listen on
+ * @param port Port to listen on
+ *
+ * @cite https://git.fit.vutbr.cz/NESFIT/IPK-Projekty/src/branch/master/Stubs/cpp/DemoUdp/server.c
+
+ * @return int Exit code
  */
 int udp_server(string host, string port) {
-    char buf[BUFSIZE];
+    // Setup
+    char buf[UDP_BUFSIZE];
     int server_socket, port_number, bytestx, bytesrx;
     socklen_t clientlen;
     struct sockaddr_in client_address, server_address;
-    int optval;
+    int optval;  // For setsockopt
     const char *hostaddrp;
     struct hostent *hostp;
     port_number = atoi(port.c_str());
 
-    /* Vytvoreni soketu */
+    // Create socket
     if ((server_socket = socket(AF_INET, SOCK_DGRAM, 0)) <= 0) {
         perror("ERROR: socket");
         exit(EXIT_FAILURE);
     }
-    /* potlaceni defaultniho chovani rezervace portu ukonceni aplikace */
+    // Allow reuse of port
     optval = 1;
     setsockopt(server_socket, SOL_SOCKET, SO_REUSEADDR, (const void *)&optval, sizeof(int));
 
-    /* adresa serveru, potrebuje pro prirazeni pozadovaneho portu */
+    // Server address needed for bind
     bzero((char *)&server_address, sizeof(server_address));
     server_address.sin_family = AF_INET;
     server_address.sin_addr.s_addr = htonl(INADDR_ANY);
     server_address.sin_port = htons((unsigned short)port_number);
 
     bind(server_socket, (struct sockaddr *)&server_address, sizeof(server_address));
-    // if (  0)
-    // {
-    //     perror("ERROR: binding");
-    //     exit(EXIT_FAILURE);
-    // }
 
+    // Receive data in loop and send response
     while (1) {
-        printf("INFO: Ready.\n");
-        /* prijeti odpovedi a jeji vypsani */
+        // Receive data
         clientlen = sizeof(client_address);
-        bytesrx = recvfrom(server_socket, buf, BUFSIZE, 0, (struct sockaddr *)&client_address, &clientlen);
+        bytesrx = recvfrom(server_socket, buf, UDP_BUFSIZE, 0, (struct sockaddr *)&client_address, &clientlen);
         if (bytesrx < 0)
             perror("ERROR: recvfrom:");
 
+        // Get host name and address
         hostp = gethostbyaddr((const char *)&client_address.sin_addr.s_addr,
                               sizeof(client_address.sin_addr.s_addr), AF_INET);
 
         hostaddrp = inet_ntoa(client_address.sin_addr);
 
+        // Decode message
         char opcode = buf[0];
-        char len = buf[1];
+        int len = buf[1] + 0;
         char *data = buf + 2;
+        data[len] = '\0';
 
-        int res = solve_expression(data);
+        // Solve expression
+        auto parsed = parse_expression(data);
+        string res = solve_expression(parsed);
 
-        bzero(buf, BUFSIZE);
+        bzero(buf, UDP_BUFSIZE);
 
-        buf[0] = '\1';
-        buf[1] = '\0';
-        buf[2] = (char)to_string(res).length();
-        strcpy(buf + 3, to_string(res).c_str());
+        // Create payload
+        if (res == "err" or opcode != '\0') {
+            buf[0] = '\1';
+            buf[1] = '\1';
+            string err_msg = "Could not parse the message";
+            buf[2] = (char)err_msg.length();
+            strcpy(buf + 3, err_msg.c_str());
+        } else {
+            buf[0] = '\1';
+            buf[1] = '\0';
+            buf[2] = (char)res.length();
+            strcpy(buf + 3, res.c_str());
+        }
 
-        /* odeslani zpravy zpet klientovi  */
+        // Send answer to client
         bytestx = sendto(server_socket, buf, buf[2] + 3, 0, (struct sockaddr *)&client_address, clientlen);
         if (bytestx < 0)
             perror("ERROR: sendto:");
