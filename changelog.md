@@ -1,0 +1,11 @@
+### Features
+- Accept incoming connections
+- Handle multiple connections (UDP)
+- Solve expressions
+  - Nested and multiple parentheses
+  - Operands more than 2 numbers
+  - Operators `+`, `-`, `*`, `/`
+- Wrong message handling
+  - TCP: send `BYE` and close connection
+  - UDP: send error message
+- Graceful shutdown
