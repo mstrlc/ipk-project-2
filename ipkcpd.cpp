@@ -63,7 +63,6 @@ int welcome_socket;
  */
 void sighandler(int sig) {
     int pid = wait3(NULL, WNOHANG, NULL);
-    printf("Child %d spawned.\n", pid);
     close(comm_socket);
     close(welcome_socket);
 }
