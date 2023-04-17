@@ -13,14 +13,11 @@
 #include <errno.h>
 #include <netdb.h>
 #include <netinet/in.h>
-#include <semaphore.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/mman.h>
-#include <sys/shm.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -232,8 +229,8 @@ string solve_expression(list<string> tokens) {
         }
         index++;
     }
-    // Return result as integer
-    return elements.top();
+    // // Return result as integer
+    // return elements.top();
 }
 
 /**
@@ -331,7 +328,7 @@ int tcp_server(string host, string port) {
                                     continue;
                                 }
                                 // Zero buffer
-                                snprintf(buff, strlen(result.c_str()) + 8, "RESULT %s\n", result.c_str());
+                                snprintf(buff, strlen(result.c_str()) + 10, "RESULT %s\n", result.c_str());
                                 send(comm_socket, buff, strlen(buff), 0);
                             }
                         }
