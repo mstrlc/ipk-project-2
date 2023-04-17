@@ -172,9 +172,6 @@ string solve_expression(list<string> tokens) {
     int index = 0;
     string tok = arr[index];
     while (1) {
-        if (index >= tokens.size()) {
-            break;
-        }
         tok = arr[index];
         if (tok == "(") {
             arr[index] = "";
@@ -186,12 +183,19 @@ string solve_expression(list<string> tokens) {
             // Solve the new expression recursively
             string result = solve_expression(new_tokens);
             elements.push(result);
-            // Find the index of the closing parenthesis
+            // Find the index of the corresping closing parenthesis
             int closing_parenthesis_index = 0;
+            int open_parenthesis_count = 1;
+            int closed_parenthesis_count = 0;
             for (int i = index + 1; i < tokens.size(); i++) {
-                if (arr[i] == ")") {
-                    closing_parenthesis_index = i;
-                    break;
+                if (arr[i] == "(") {
+                    open_parenthesis_count++;
+                } else if (arr[i] == ")") {
+                    closed_parenthesis_count++;
+                    if (open_parenthesis_count == closed_parenthesis_count) {
+                        closing_parenthesis_index = i;
+                        break;
+                    }
                 }
             }
             // Set index to the closing parenthesis
@@ -228,6 +232,9 @@ string solve_expression(list<string> tokens) {
             return (to_string(res));
         }
         index++;
+        if (index >= tokens.size()) {
+            break;
+        }
     }
     // // Return result as integer
     // return elements.top();
