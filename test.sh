@@ -1,11 +1,11 @@
-#!/bin/bash
+#!/bin/sh
 
 # echo time
 echo "Running ipkcpd tests at $(date)"
 printf "\n"
 
-# stop the server
-killall ipkcpd
+# stop the server if something went wrong in the middle of the test
+pkill ipkcpd
 
 # go through all files in tests directory
 # and run them as input
@@ -29,7 +29,7 @@ done
 printf "\n"
 
 # stop the server
-killall ipkcpd
+pkill ipkcpd
 
 # start the server in the background
 echo "-- UDP TESTS --"
@@ -48,4 +48,4 @@ do
 done
 
 # stop the server
-killall ipkcpd
+pkill ipkcpd
