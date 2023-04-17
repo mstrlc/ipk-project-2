@@ -1,0 +1,20 @@
+Running ipkcpd tests at Mon Apr 17 17:49:40 CEST 2023
+
+-- TCP TESTS --
+	Running test tests/in/tcp/00-greet
+	Running test tests/in/tcp/01-simple
+	Running test tests/in/tcp/02-multiple
+	Running test tests/in/tcp/03-nested
+	Running test tests/in/tcp/05-malformed
+	Running test tests/in/tcp/06-no-hello
+	Running test tests/in/tcp/07-complicated
+	Running test tests/in/tcp/08-divide
+	Running test tests/in/tcp/09-megacomplicated
+
+-- UDP TESTS --
+	Running test tests/in/udp/00-simple
+	Running test tests/in/udp/01-multiple
+	Running test tests/in/udp/02-nested
+	Running test tests/in/udp/03-complicated
+	Running test tests/in/udp/04-divide
+	Running test tests/in/udp/05-megacomplicated
